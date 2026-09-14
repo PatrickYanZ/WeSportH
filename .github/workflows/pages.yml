@@ -1,0 +1,40 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v5
+      - name: Configure API URL
+        env:
+          API_BASE: ${{ vars.WESPORT_API_BASE }}
+        run: |
+          test -n "$API_BASE" || { echo "Repository variable WESPORT_API_BASE is required"; exit 1; }
+          node -e "require('fs').writeFileSync('docs/config.js', 'window.WESPORT_CONFIG = ' + JSON.stringify({ API_BASE: process.env.API_BASE }) + ';\\n')"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

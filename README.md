@@ -1,0 +1,81 @@
+# WeSportH 私教预约
+
+一个低成本、可公开测试的私教预约系统：
+
+- `docs/`：用户端、教练端、管理员端，部署到 GitHub Pages。
+- `worker/`：登录、权限、排期和预约 API，部署到 Cloudflare Workers。
+- Cloudflare D1：保存共享账号、排期、预约和会话数据。
+
+## 1. 创建 Cloudflare D1
+
+需要 Node.js 20+ 和 Cloudflare 账号。
+
+```bash
+cd worker
+npm install
+npx wrangler login
+npx wrangler d1 create wesporth-db
+```
+
+复制 `worker/wrangler.example.jsonc` 为 `worker/wrangler.jsonc`，把命令返回的数据库 ID 填入 `database_id`。
+如果你的 GitHub 用户名不是 `PatrickYanZ`，还需要把 `ALLOWED_ORIGINS` 中的 Pages 域名改成自己的 `https://<用户名>.github.io`。
+
+```bash
+npm run db:local
+npm run db:remote
+npx wrangler secret put SETUP_TOKEN
+npm run deploy
+```
+
+`SETUP_TOKEN` 是首次创建管理员时使用的一次性部署密钥。请设置为至少 24 位随机字符串，不要提交到 GitHub。它不是日常登录的二次验证。
+
+部署完成后记录 Worker URL，例如：
+
+```text
+https://wesporth-api.<subdomain>.workers.dev
+```
+
+## 2. 配置 GitHub Actions
+
+在 GitHub 仓库的 `Settings → Secrets and variables → Actions` 中设置：
+
+### Secrets
+
+- `CLOUDFLARE_API_TOKEN`：具备 Workers Scripts 编辑和 D1 编辑权限的 Cloudflare API Token。
+- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare Account ID。
+- `CLOUDFLARE_D1_DATABASE_ID`：刚创建的 D1 Database ID。
+
+### Variables
+
+- `WESPORT_API_BASE`：完整 Worker URL，不要以 `/` 结尾。
+
+然后在 `Settings → Pages → Build and deployment` 中选择 `GitHub Actions`。推送到 `main` 后，两个工作流会分别发布 Worker 和网页。
+
+## 3. 首次使用
+
+打开 GitHub Pages 地址：
+
+1. 选择“管理员”。
+2. 点击“首次部署？初始化管理员”。
+3. 设置第一个管理员账号和密码。这个操作只能成功一次。页面要求的“部署初始化密钥”就是前面保存到 Cloudflare 的 `SETUP_TOKEN`。
+4. 管理员登录后创建教练账号；普通用户可自行注册。
+
+## 本地开发
+
+后端：
+
+```bash
+cd worker
+npm install
+npm run db:local
+npm run dev
+```
+
+复制 `.dev.vars.example` 为 `.dev.vars` 并设置本地初始化密钥。将 `docs/config.js` 的 `API_BASE` 临时设置为 `http://localhost:8787`，再启动任意静态服务器预览 `docs/`。
+
+## 安全说明
+
+- 密码使用 PBKDF2-SHA-256 和随机盐保存，不存储明文密码。
+- 登录令牌只以哈希形式保存在 D1；客户端令牌保存在当前标签页的 `sessionStorage`。
+- 所有角色权限均由 Worker 检查，管理员修改用户密码后会注销该用户现有会话。
+- 不要把 Cloudflare API Token、Account ID 或其他密钥写入前端文件。

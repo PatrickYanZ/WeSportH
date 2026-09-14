@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wesporth-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-13",
+  "vars": {
+    "ALLOWED_ORIGINS": "https://patrickyanz.github.io,http://localhost:4173,http://127.0.0.1:4173"
+  },
+  "secrets": {
+    "required": ["SETUP_TOKEN"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wesporth-db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

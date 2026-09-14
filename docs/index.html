@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#111511">
+  <meta name="description" content="WeSportH 私教预约与教练排期">
+  <title>WeSportH · 私教预约</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111511'/%3E%3Cpath d='M13 25h7v14h-7zm31 0h7v14h-7zM20 29h24v6H20z' fill='%23d9ff43'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="brand-panel" aria-label="WeSportH 品牌介绍">
+      <div class="brand-mark"><span>W</span> WeSportH</div>
+      <div class="brand-copy">
+        <p class="eyebrow">TRAIN · BOOK · PROGRESS</p>
+        <h1>把训练排进<br>你的生活。</h1>
+        <p>查看教练档期、预约课程、管理训练安排，一个入口就够了。</p>
+      </div>
+      <div class="brand-metric"><strong>07</strong><span>未来 7 天<br>可预约时段</span></div>
+    </section>
+
+    <section class="login-panel">
+      <div class="mobile-brand"><span>W</span> WeSportH</div>
+      <div class="login-card">
+        <p class="eyebrow lime">MEMBER ACCESS</p>
+        <h2>欢迎回来</h2>
+        <p class="muted">选择身份，进入你的训练日程。</p>
+
+        <div class="role-tabs" role="tablist" aria-label="登录身份">
+          <button class="role-tab active" type="button" role="tab" aria-selected="true" data-role="member">用户</button>
+          <button class="role-tab" type="button" role="tab" aria-selected="false" data-role="coach">教练</button>
+          <button class="role-tab" type="button" role="tab" aria-selected="false" data-role="admin">管理员</button>
+        </div>
+
+        <form id="login-form">
+          <label for="username">账号</label>
+          <input id="username" name="username" autocomplete="username" placeholder="请输入账号" required>
+          <label for="password">密码</label>
+          <div class="password-wrap">
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" required>
+            <button id="toggle-password" class="text-button" type="button" aria-label="显示密码">显示</button>
+          </div>
+          <p id="login-error" class="form-error" role="alert" hidden></p>
+          <button class="primary-button" type="submit">登录 <span aria-hidden="true">↗</span></button>
+        </form>
+
+        <button id="register-trigger" class="secondary-button" type="button">还没有账号？注册用户</button>
+        <button id="setup-trigger" class="secondary-button" type="button" hidden>首次部署？初始化管理员</button>
+        <p class="demo-tip">公共测试版 · 账号和预约数据由共享数据库保存</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="register-dialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="register-title" hidden>
+    <div class="dialog-card">
+      <button class="dialog-close" type="button" aria-label="关闭">×</button>
+      <p class="eyebrow lime">NEW MEMBER</p>
+      <h2 id="register-title">创建用户账号</h2>
+      <form id="register-form">
+        <label for="reg-name">姓名</label>
+        <input id="reg-name" required placeholder="例如：王小明">
+        <label for="reg-username">登录账号</label>
+        <input id="reg-username" required minlength="3" placeholder="至少 3 个字符">
+        <label for="reg-password">设置密码</label>
+        <input id="reg-password" type="password" required minlength="8" placeholder="至少 8 个字符">
+        <p id="register-error" class="form-error" role="alert" hidden></p>
+        <button class="primary-button" type="submit">创建并登录</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="setup-dialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="setup-title" hidden>
+    <div class="dialog-card">
+      <button class="dialog-close" type="button" data-close="setup" aria-label="关闭">×</button>
+      <p class="eyebrow lime">FIRST-TIME SETUP</p>
+      <h2 id="setup-title">初始化管理员</h2>
+      <p class="muted">此操作仅能成功一次。请设置第一个管理员账号。</p>
+      <form id="setup-form">
+        <label for="setup-name">管理员姓名</label>
+        <input id="setup-name" required placeholder="例如：运营管理员">
+        <label for="setup-username">登录账号</label>
+        <input id="setup-username" required minlength="3" pattern="[a-z0-9_]+" placeholder="admin">
+        <label for="setup-password">设置密码</label>
+        <input id="setup-password" type="password" required minlength="8" placeholder="至少 8 个字符">
+        <label for="setup-token">部署初始化密钥</label>
+        <input id="setup-token" type="password" required autocomplete="off" placeholder="Cloudflare SETUP_TOKEN">
+        <p id="setup-error" class="form-error" role="alert" hidden></p>
+        <button class="primary-button" type="submit">创建管理员</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

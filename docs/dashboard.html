@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#111511">
+  <meta name="description" content="WeSportH 私教预约与教练排期工作台">
+  <title>训练日程 · WeSportH</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111511'/%3E%3Cpath d='M13 25h7v14h-7zm31 0h7v14h-7zM20 29h24v6H20z' fill='%23d9ff43'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="app-body">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand-mark sidebar-brand" href="dashboard.html"><span>W</span> WeSportH</a>
+      <nav id="side-nav" class="side-nav" aria-label="主导航"></nav>
+      <div class="sidebar-account">
+        <div id="sidebar-avatar" class="avatar">WS</div>
+        <div><strong id="sidebar-name">—</strong><span id="sidebar-role">—</span></div>
+        <button class="icon-button" data-action="logout" aria-label="退出登录">↗</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p id="page-kicker" class="eyebrow lime">TODAY</p>
+          <h1 id="page-title">训练日程</h1>
+        </div>
+        <div class="topbar-actions">
+          <span id="today-label" class="date-chip"></span>
+          <button id="primary-action" class="compact-primary" type="button" hidden></button>
+        </div>
+      </header>
+      <section id="app-content" class="app-content" aria-live="polite"></section>
+    </main>
+
+    <nav id="mobile-nav" class="mobile-nav" aria-label="移动端主导航"></nav>
+  </div>
+
+  <div id="modal" class="dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="dialog-card app-dialog-card">
+      <button class="dialog-close" type="button" data-action="close-modal" aria-label="关闭">×</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
