@@ -18,7 +18,7 @@ npx wrangler d1 create wesporth-db
 ```
 
 复制 `worker/wrangler.example.jsonc` 为 `worker/wrangler.jsonc`，把命令返回的数据库 ID 填入 `database_id`。
-如果你的 GitHub 用户名不是 `PatrickYanZ`，还需要把 `ALLOWED_ORIGINS` 中的 Pages 域名改成自己的 `https://<用户名>.github.io`。
+`ALLOWED_ORIGINS` 已包含当前可能使用的两个 Pages origin：`https://patrickyan.github.io` 和 `https://patrickyanz.github.io`。Origin 只包含协议和域名，不要添加 `/WeSportH/` 路径。如果 Pages 地址有变化，请相应更新这里。
 
 ```bash
 npm run db:local
@@ -33,6 +33,7 @@ npm run deploy
 
 ```text
 https://wesporth-api.<subdomain>.workers.dev
+https://wesporth-api.wesporth-api.workers.dev
 ```
 
 ## 2. 配置 GitHub Actions
@@ -48,6 +49,8 @@ https://wesporth-api.<subdomain>.workers.dev
 ### Variables
 
 - `WESPORT_API_BASE`：完整 Worker URL，不要以 `/` 结尾。
+
+本项目是静态网页，不使用 Vite。Pages 工作流会读取 `vars.WESPORT_API_BASE` 并在部署时生成 `docs/config.js`，无需设置 `VITE_API_BASE_URL`。
 
 然后在 `Settings → Pages → Build and deployment` 中选择 `GitHub Actions`。推送到 `main` 后，两个工作流会分别发布 Worker 和网页。
 
