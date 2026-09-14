@@ -5,4 +5,5 @@ worker/.dev.vars.*
 !worker/.dev.vars.example
 worker/.env*
 worker/wrangler.jsonc
+test-state-*/
 *.log

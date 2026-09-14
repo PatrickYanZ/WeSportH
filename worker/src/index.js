@@ -1,5 +1,9 @@
 const encoder = new TextEncoder();
-const PASSWORD_ITERATIONS = 210000;
+// Workers Free allows 10 ms of CPU time per request. Keep the interactive
+// password derivation inside that budget and persist the cost with each hash
+// so it can be raised later without invalidating existing accounts.
+const PASSWORD_ITERATIONS = 10000;
+const LEGACY_PASSWORD_ITERATIONS = 210000;
 const SESSION_DAYS = 7;
 
 export default {
@@ -108,11 +112,11 @@ async function sha256(value) {
   return b64(await crypto.subtle.digest('SHA-256', encoder.encode(value)));
 }
 
-async function passwordRecord(password, saltValue) {
+async function passwordRecord(password, saltValue, iterations = PASSWORD_ITERATIONS) {
   const salt = saltValue ? fromB64(saltValue) : crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
-  const hash = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PASSWORD_ITERATIONS }, key, 256);
-  return { hash: b64(hash), salt: b64(salt) };
+  const hash = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256);
+  return { hash: b64(hash), salt: b64(salt), iterations };
 }
 
 async function authenticate(request, env) {
@@ -149,10 +153,10 @@ async function setupAdmin(request, env, cors) {
     let result;
     try {
       result = await env.DB.prepare(`
-        INSERT INTO users (id, username, display_name, role, password_hash, password_salt)
-        SELECT ?, ?, ?, 'admin', ?, ?
+        INSERT INTO users (id, username, display_name, role, password_hash, password_salt, password_iterations)
+        SELECT ?, ?, ?, 'admin', ?, ?, ?
         WHERE NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')
-      `).bind(id, username, name, record.hash, record.salt).run();
+      `).bind(id, username, name, record.hash, record.salt, record.iterations).run();
     } catch (error) {
       if (String(error).includes('UNIQUE')) throw new HttpError(409, '该账号已被使用，请换一个管理员账号。');
       throw error;
@@ -172,8 +176,8 @@ async function registerMember(request, env, cors) {
     const record = await passwordRecord(password);
     const id = crypto.randomUUID();
     try {
-      await env.DB.prepare(`INSERT INTO users (id, username, display_name, role, password_hash, password_salt) VALUES (?, ?, ?, 'member', ?, ?)`)
-        .bind(id, username, name, record.hash, record.salt).run();
+      await env.DB.prepare(`INSERT INTO users (id, username, display_name, role, password_hash, password_salt, password_iterations) VALUES (?, ?, ?, 'member', ?, ?, ?)`)
+        .bind(id, username, name, record.hash, record.salt, record.iterations).run();
     } catch (error) {
       if (String(error).includes('UNIQUE')) throw new HttpError(409, '该账号已存在。');
       throw error;
@@ -193,7 +197,7 @@ async function login(request, env, cors) {
     const user = await env.DB.prepare('SELECT * FROM users WHERE username = ? AND role = ?').bind(username, role).first();
     if (!user || user.status !== 'active') throw new HttpError(401, '账号、密码或身份不匹配。');
     if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) throw new HttpError(429, '尝试次数过多，请稍后再试。');
-    const record = await passwordRecord(password, user.password_salt);
+    const record = await passwordRecord(password, user.password_salt, Number(user.password_iterations || LEGACY_PASSWORD_ITERATIONS));
     if (record.hash !== user.password_hash) {
       const attempts = Number(user.failed_attempts || 0) + 1;
       const lockedUntil = attempts >= 8 ? new Date(Date.now() + 15 * 60000).toISOString() : null;
@@ -331,7 +335,7 @@ async function createCoach(request, auth, env, cors) {
     const id = crypto.randomUUID();
     try {
       await env.DB.batch([
-        env.DB.prepare(`INSERT INTO users (id, username, display_name, role, password_hash, password_salt) VALUES (?, ?, ?, 'coach', ?, ?)`).bind(id, username, name, record.hash, record.salt),
+        env.DB.prepare(`INSERT INTO users (id, username, display_name, role, password_hash, password_salt, password_iterations) VALUES (?, ?, ?, 'coach', ?, ?, ?)`).bind(id, username, name, record.hash, record.salt, record.iterations),
         env.DB.prepare('INSERT INTO coach_profiles (user_id, specialty, tags, experience) VALUES (?, ?, ?, ?)').bind(id, specialty, JSON.stringify([specialty]), experience)
       ]);
     } catch (error) {
@@ -361,9 +365,9 @@ async function resetMemberPassword(request, auth, env, cors, memberId) {
     const password = cleanPassword(data.password);
     const record = await passwordRecord(password);
     const result = await env.DB.prepare(`
-      UPDATE users SET password_hash = ?, password_salt = ?, failed_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP
+      UPDATE users SET password_hash = ?, password_salt = ?, password_iterations = ?, failed_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND role = 'member'
-    `).bind(record.hash, record.salt, memberId).run();
+    `).bind(record.hash, record.salt, record.iterations, memberId).run();
     if (!result.meta.changes) throw new HttpError(404, '没有找到该用户。');
     await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(memberId).run();
     return json({ ok: true }, 200, cors);
@@ -375,7 +379,7 @@ async function changeOwnPassword(request, auth, env, cors) {
     const data = await body(request);
     const password = cleanPassword(data.password);
     const record = await passwordRecord(password);
-    await env.DB.prepare('UPDATE users SET password_hash = ?, password_salt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(record.hash, record.salt, auth.id).run();
+    await env.DB.prepare('UPDATE users SET password_hash = ?, password_salt = ?, password_iterations = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(record.hash, record.salt, record.iterations, auth.id).run();
     await env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').bind(auth.id, auth.token_hash).run();
     return json({ ok: true }, 200, cors);
   } catch (error) { return handled(error, cors); }
