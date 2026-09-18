@@ -41,7 +41,7 @@ export default {
       const coachMatch = path.match(/^\/api\/admin\/coaches\/([^/]+)$/);
       if (request.method === 'PATCH' && coachMatch) return updateCoach(request, auth, env, cors, coachMatch[1]);
       const userPasswordMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
-      if (request.method === 'PUT' && userPasswordMatch) return resetMemberPassword(request, auth, env, cors, userPasswordMatch[1]);
+      if (request.method === 'PUT' && userPasswordMatch) return resetManagedUserPassword(request, auth, env, cors, userPasswordMatch[1]);
 
       return json({ error: 'not_found' }, 404, cors);
     } catch (error) {
@@ -358,7 +358,7 @@ async function updateCoach(request, auth, env, cors, coachId) {
   } catch (error) { return handled(error, cors); }
 }
 
-async function resetMemberPassword(request, auth, env, cors, memberId) {
+async function resetManagedUserPassword(request, auth, env, cors, userId) {
   try {
     requireRole(auth, 'admin');
     const data = await body(request);
@@ -366,10 +366,10 @@ async function resetMemberPassword(request, auth, env, cors, memberId) {
     const record = await passwordRecord(password);
     const result = await env.DB.prepare(`
       UPDATE users SET password_hash = ?, password_salt = ?, password_iterations = ?, failed_attempts = 0, locked_until = NULL, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ? AND role = 'member'
-    `).bind(record.hash, record.salt, record.iterations, memberId).run();
+      WHERE id = ? AND role IN ('member', 'coach')
+    `).bind(record.hash, record.salt, record.iterations, userId).run();
     if (!result.meta.changes) throw new HttpError(404, '没有找到该用户。');
-    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(memberId).run();
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
     return json({ ok: true }, 200, cors);
   } catch (error) { return handled(error, cors); }
 }

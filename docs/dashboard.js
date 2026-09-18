@@ -161,7 +161,7 @@ function adminCoachRow(coach) {
   const capacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
   const booked = slots.reduce((sum, slot) => sum + Number(slot.bookedCount || 0), 0);
   const percent = capacity ? Math.min(100, Math.round(booked / capacity * 100)) : 0;
-  return `<article class="data-row"><div class="row-main"><strong>${esc(coach.name)}</strong><span>${esc(coach.specialty)} · ${esc(coach.username)}</span></div><div><div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div><div class="row-meta" style="margin-top:6px">预约占用 ${percent}%</div></div><div class="row-meta">${slots.length} 个开放时段<br>${booked} 个待服务</div><div class="actions"><button class="inline-button" data-action="toggle-coach" data-id="${coach.id}" data-status="${coach.status}">${coach.status === 'active' ? '停用' : '启用'}</button></div></article>`;
+  return `<article class="data-row"><div class="row-main"><strong>${esc(coach.name)}</strong><span>${esc(coach.specialty)} · ${esc(coach.username)}</span></div><div><div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div><div class="row-meta" style="margin-top:6px">预约占用 ${percent}%</div></div><div class="row-meta">${slots.length} 个开放时段<br>${booked} 个待服务</div><div class="actions"><button class="inline-button" data-action="reset-user-password" data-id="${coach.id}" data-name="${esc(coach.name)}">修改密码</button><button class="inline-button" data-action="toggle-coach" data-id="${coach.id}" data-status="${coach.status}">${coach.status === 'active' ? '停用' : '启用'}</button></div></article>`;
 }
 
 function renderAdminHome() {
