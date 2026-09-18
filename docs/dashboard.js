@@ -24,7 +24,7 @@ const NAV = {
   ]
 };
 
-const state = { view: 'home', coachFilter: '全部', selectedSlot: null, passwordTarget: null, nameTarget: null };
+const state = { view: 'home', coachFilter: '全部', selectedSlot: null, bookingCoachId: null, bookingDate: null, passwordTarget: null, nameTarget: null };
 const db = { coaches: [], slots: [], bookings: [], users: [] };
 const $ = (selector) => document.querySelector(selector);
 const content = $('#app-content');
@@ -71,6 +71,8 @@ function openModal(html) {
 function closeModal() {
   $('#modal').hidden = true;
   state.selectedSlot = null;
+  state.bookingCoachId = null;
+  state.bookingDate = null;
   state.passwordTarget = null;
   state.nameTarget = null;
 }
@@ -227,8 +229,30 @@ async function refresh(message = '') {
 
 function showCoachSchedule(coachId) {
   const coach = getCoach(coachId);
-  const slots = db.slots.filter((item) => item.coachId === coachId && item.date >= dateISO()).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
-  openModal(`<p class="eyebrow lime">BOOK A SESSION</p><h2 id="modal-title">${esc(coach.name)}的排期</h2><p class="muted">${esc(coach.specialty)} · 选择有余位的训练时间</p><div class="slot-options">${slots.length ? slots.map((slot) => `<button class="slot-option" data-action="select-slot" data-id="${slot.id}" ${availableCount(slot) < 1 ? 'disabled' : ''}><strong>${formatDate(slot.date)}</strong><br>${slot.time} · ${availableCount(slot) ? `剩 ${availableCount(slot)} 位` : '已约满'}</button>`).join('') : '<div class="empty-state"><div><strong>暂无开放排期</strong>请选择其他教练。</div></div>'}</div><label for="booking-note">训练备注</label><textarea id="booking-note" maxlength="200" placeholder="例如：第一次训练，希望先做体态评估"></textarea><p id="booking-error" class="form-error" hidden></p><button class="primary-button" data-action="confirm-booking" type="button">确认预约 <span>↗</span></button>`);
+  state.bookingCoachId = coachId;
+  state.bookingDate = dateISO();
+  state.selectedSlot = null;
+  const days = Array.from({ length: 14 }, (_, index) => dateISO(index));
+  openModal(`<p class="eyebrow lime">BOOK A SESSION</p><h2 id="modal-title">${esc(coach.name)}的排期</h2><p class="muted">${esc(coach.specialty)} · 左右滚动选择未来 14 天内的日期</p><div class="booking-date-scroller" aria-label="选择预约日期">${days.map((date) => { const value = new Date(`${date}T12:00:00`); const fullDate = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }).format(value); const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(value); return `<button class="booking-date-option ${date === state.bookingDate ? 'selected' : ''}" data-action="select-booking-date" data-date="${date}" type="button" aria-pressed="${date === state.bookingDate}"><strong>${fullDate}</strong><span>${weekday}</span></button>`; }).join('')}</div><div class="selected-date-heading"><span>所选日期</span><strong id="selected-booking-date"></strong></div><div id="booking-slot-options" class="slot-options"></div><label for="booking-note">训练备注</label><textarea id="booking-note" maxlength="200" placeholder="例如：第一次训练，希望先做体态评估"></textarea><p id="booking-error" class="form-error" hidden></p><button class="primary-button" data-action="confirm-booking" type="button">确认预约 <span>↗</span></button>`);
+  renderBookingDateSlots();
+}
+
+function renderBookingDateSlots() {
+  const date = state.bookingDate;
+  const dateValue = new Date(`${date}T12:00:00`);
+  const label = `${new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }).format(dateValue)} ${new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(dateValue)}`;
+  $('#selected-booking-date').textContent = label;
+  document.querySelectorAll('.booking-date-option').forEach((item) => {
+    const selected = item.dataset.date === date;
+    item.classList.toggle('selected', selected);
+    item.setAttribute('aria-pressed', String(selected));
+  });
+  const slots = db.slots
+    .filter((item) => item.coachId === state.bookingCoachId && item.date === date)
+    .sort((a, b) => a.time.localeCompare(b.time));
+  $('#booking-slot-options').innerHTML = slots.length
+    ? slots.map((slot) => `<button class="slot-option" data-action="select-slot" data-id="${slot.id}" ${availableCount(slot) < 1 ? 'disabled' : ''}><strong>${slot.time}</strong><br>${availableCount(slot) ? `剩 ${availableCount(slot)} 位` : '已约满'}</button>`).join('')
+    : '<div class="empty-state compact-empty"><div><strong>当天暂无可约排期</strong>请在上方滚动选择其他日期。</div></div>';
 }
 
 function addSlotModal() {
@@ -264,6 +288,11 @@ document.addEventListener('click', async (event) => {
     } else if (action.dataset.action === 'close-modal') closeModal();
     else if (action.dataset.action === 'view-coach') showCoachSchedule(id);
     else if (action.dataset.action === 'filter-coach') { state.coachFilter = action.dataset.filter; render(); }
+    else if (action.dataset.action === 'select-booking-date') {
+      state.bookingDate = action.dataset.date;
+      state.selectedSlot = null;
+      renderBookingDateSlots();
+    }
     else if (action.dataset.action === 'select-slot') {
       state.selectedSlot = id;
       document.querySelectorAll('.slot-option').forEach((item) => item.classList.toggle('selected', item.dataset.id === id));
