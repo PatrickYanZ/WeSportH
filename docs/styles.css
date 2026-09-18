@@ -197,7 +197,7 @@ input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(217,255,67,.
 .empty-state { min-height: 180px; display: grid; place-items: center; text-align: center; color: var(--muted); }
 .empty-state strong { display: block; margin-bottom: 8px; color: var(--text); font-size: 1.05rem; }
 
-.slot-calendar { display: grid; grid-template-columns: repeat(7, minmax(92px, 1fr)); gap: 9px; overflow-x: auto; padding-bottom: 6px; }
+.slot-calendar { display: grid; grid-template-columns: repeat(7, minmax(92px, 1fr)); gap: 14px 9px; overflow-x: auto; padding-bottom: 6px; }
 .day-column { min-width: 92px; padding: 12px 8px; border: 1px solid var(--line); border-radius: 13px; background: #141915; }
 .day-column h3 { margin: 0 0 12px; text-align: center; font-size: .78rem; }
 .day-column h3 span { display: block; margin-top: 4px; color: var(--muted); font-weight: 500; }
@@ -205,10 +205,13 @@ input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(217,255,67,.
 .slot-chip.available:hover { border-color: var(--lime); }
 .slot-chip.full { color: #6e766f; text-decoration: line-through; }
 .slot-chip.mine { color: var(--lime-ink); background: var(--lime); border-color: var(--lime); }
+.booking-calendar .day-column { min-height: 138px; }
+.booking-calendar .slot-chip { cursor: default; text-decoration: none; }
+.calendar-empty { min-height: 55px; display: grid; place-items: center; color: #59625b; font-size: 1rem; }
 
 .data-row { grid-template-columns: minmax(140px, 1.2fr) minmax(150px, 1fr) minmax(130px, .8fr) auto; }
 .user-row { grid-template-columns: minmax(140px, 1.2fr) minmax(120px, .8fr) minmax(110px, .65fr) auto; }
-.data-row .actions { display: flex; gap: 7px; }
+.data-row .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .table-head { padding: 0 15px 8px; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
 .progress-track { height: 7px; overflow: hidden; border-radius: 10px; background: #283029; }
 .progress-fill { height: 100%; border-radius: inherit; background: var(--lime); }

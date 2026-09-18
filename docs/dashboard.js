@@ -24,7 +24,7 @@ const NAV = {
   ]
 };
 
-const state = { view: 'home', coachFilter: '全部', selectedSlot: null, passwordTarget: null };
+const state = { view: 'home', coachFilter: '全部', selectedSlot: null, passwordTarget: null, nameTarget: null };
 const db = { coaches: [], slots: [], bookings: [], users: [] };
 const $ = (selector) => document.querySelector(selector);
 const content = $('#app-content');
@@ -72,6 +72,7 @@ function closeModal() {
   $('#modal').hidden = true;
   state.selectedSlot = null;
   state.passwordTarget = null;
+  state.nameTarget = null;
 }
 
 function buildNav() {
@@ -128,8 +129,15 @@ function renderMemberHome() {
 }
 
 function renderMemberBookings() {
+  const endDate = dateISO(13);
+  const futureBookings = db.bookings.filter((booking) => {
+    const slot = getSlot(booking.slotId);
+    return booking.status === 'confirmed' && slot && slot.date >= dateISO() && slot.date <= endDate;
+  });
+  const days = Array.from({ length: 14 }, (_, index) => dateISO(index));
   setHeader('我的预约', 'MY SESSIONS');
-  content.innerHTML = `<section class="section-block"><div class="section-head"><div><h2>全部训练记录</h2><p>预约成功后可在开课前取消</p></div></div><div class="appointment-list">${db.bookings.length ? db.bookings.map((item) => bookingRow(item)).join('') : '<div class="empty-state"><div><strong>暂无预约记录</strong>从发现页选择教练和时段。</div></div>'}</div></section>`;
+  content.innerHTML = `<section class="section-block"><div class="section-head"><div><h2>未来 14 天课程表</h2><p>已预约课程按日期排列，每排显示 7 天</p></div><span class="date-chip">${futureBookings.length} 节待上课</span></div><div class="slot-calendar booking-calendar">${days.map((date) => { const bookings = futureBookings.filter((booking) => getSlot(booking.slotId)?.date === date); return `<div class="day-column"><h3>${formatDate(date, { weekday: 'short' })}<span>${date.slice(5).replace('-', '/')}</span></h3>${bookings.length ? bookings.map((booking) => { const slot = getSlot(booking.slotId); const coach = getCoach(slot.coachId); return `<div class="slot-chip mine"><strong>${slot.time}</strong><br>${esc(coach?.name || '教练')}</div>`; }).join('') : '<div class="calendar-empty">—</div>'}</div>`; }).join('')}</div></section>
+    <section class="section-block"><div class="section-head"><div><h2>全部训练记录</h2><p>预约成功后可在开课前取消</p></div></div><div class="appointment-list">${db.bookings.length ? db.bookings.map((item) => bookingRow(item)).join('') : '<div class="empty-state"><div><strong>暂无预约记录</strong>从发现页选择教练和时段。</div></div>'}</div></section>`;
 }
 
 function renderProfile() {
@@ -147,8 +155,8 @@ function renderCoachHome() {
 
 function renderCoachSchedule() {
   setHeader('排期管理', 'AVAILABILITY', '＋ 新增排期');
-  const days = Array.from({ length: 7 }, (_, index) => dateISO(index));
-  content.innerHTML = `<section class="section-block"><div class="section-head"><div><h2>未来 7 天</h2><p>点击时段可查看占用情况或删除空排期</p></div></div><div class="slot-calendar">${days.map((date) => { const slots = db.slots.filter((item) => item.coachId === account.id && item.date === date).sort((a, b) => a.time.localeCompare(b.time)); return `<div class="day-column"><h3>${formatDate(date, { weekday: 'short' })}<span>${date.slice(5).replace('-', '/')}</span></h3>${slots.length ? slots.map((slot) => `<button class="slot-chip ${availableCount(slot) ? 'available' : 'full'}" data-action="manage-slot" data-id="${slot.id}">${slot.time}<br>${slot.bookedCount}/${slot.capacity} 人</button>`).join('') : '<div class="empty-state" style="min-height:80px;font-size:.72rem">休息</div>'}</div>`; }).join('')}</div></section>`;
+  const days = Array.from({ length: 14 }, (_, index) => dateISO(index));
+  content.innerHTML = `<section class="section-block"><div class="section-head"><div><h2>未来 14 天</h2><p>两排展示，每排 7 天；点击时段可查看占用情况或删除空排期</p></div></div><div class="slot-calendar">${days.map((date) => { const slots = db.slots.filter((item) => item.coachId === account.id && item.date === date).sort((a, b) => a.time.localeCompare(b.time)); return `<div class="day-column"><h3>${formatDate(date, { weekday: 'short' })}<span>${date.slice(5).replace('-', '/')}</span></h3>${slots.length ? slots.map((slot) => `<button class="slot-chip ${availableCount(slot) ? 'available' : 'full'}" data-action="manage-slot" data-id="${slot.id}">${slot.time}<br>${slot.bookedCount}/${slot.capacity} 人</button>`).join('') : '<div class="empty-state" style="min-height:80px;font-size:.72rem">休息</div>'}</div>`; }).join('')}</div></section>`;
 }
 
 function renderCoachClients() {
@@ -161,7 +169,7 @@ function adminCoachRow(coach) {
   const capacity = slots.reduce((sum, slot) => sum + Number(slot.capacity), 0);
   const booked = slots.reduce((sum, slot) => sum + Number(slot.bookedCount || 0), 0);
   const percent = capacity ? Math.min(100, Math.round(booked / capacity * 100)) : 0;
-  return `<article class="data-row"><div class="row-main"><strong>${esc(coach.name)}</strong><span>${esc(coach.specialty)} · ${esc(coach.username)}</span></div><div><div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div><div class="row-meta" style="margin-top:6px">预约占用 ${percent}%</div></div><div class="row-meta">${slots.length} 个开放时段<br>${booked} 个待服务</div><div class="actions"><button class="inline-button" data-action="reset-user-password" data-id="${coach.id}" data-name="${esc(coach.name)}">修改密码</button><button class="inline-button" data-action="toggle-coach" data-id="${coach.id}" data-status="${coach.status}">${coach.status === 'active' ? '停用' : '启用'}</button></div></article>`;
+  return `<article class="data-row"><div class="row-main"><strong>${esc(coach.name)}</strong><span>${esc(coach.specialty)} · ${esc(coach.username)}</span></div><div><div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div><div class="row-meta" style="margin-top:6px">预约占用 ${percent}%</div></div><div class="row-meta">${slots.length} 个开放时段<br>${booked} 个待服务</div><div class="actions"><button class="inline-button" data-action="edit-user-name" data-id="${coach.id}" data-name="${esc(coach.name)}">修改姓名</button><button class="inline-button" data-action="reset-user-password" data-id="${coach.id}" data-name="${esc(coach.name)}">修改密码</button><button class="inline-button" data-action="toggle-coach" data-id="${coach.id}" data-status="${coach.status}">${coach.status === 'active' ? '停用' : '启用'}</button></div></article>`;
 }
 
 function renderAdminHome() {
@@ -179,7 +187,7 @@ function adminUserRow(user) {
   const bookings = db.bookings.filter((item) => item.member === user.username);
   const active = bookings.filter((item) => item.status === 'confirmed').length;
   const completed = bookings.filter((item) => item.status === 'completed').length;
-  return `<article class="data-row user-row"><div class="row-main"><strong>${esc(user.name)}</strong><span>${esc(user.username)}</span></div><div class="row-meta">待训练 ${active} 次<br>已完成 ${completed} 次</div><div class="row-meta">预约总数 ${bookings.length}</div><div class="actions"><button class="inline-button" data-action="reset-user-password" data-id="${user.id}" data-name="${esc(user.name)}">修改密码</button></div></article>`;
+  return `<article class="data-row user-row"><div class="row-main"><strong>${esc(user.name)}</strong><span>${esc(user.username)}</span></div><div class="row-meta">待训练 ${active} 次<br>已完成 ${completed} 次</div><div class="row-meta">预约总数 ${bookings.length}</div><div class="actions"><button class="inline-button" data-action="edit-user-name" data-id="${user.id}" data-name="${esc(user.name)}">修改姓名</button><button class="inline-button" data-action="reset-user-password" data-id="${user.id}" data-name="${esc(user.name)}">修改密码</button></div></article>`;
 }
 
 function renderAdminUsers() {
@@ -237,6 +245,11 @@ function passwordModal(targetId = null, name = '') {
   openModal(`<p class="eyebrow lime">${adminReset ? 'RESET PASSWORD' : 'SECURITY'}</p><h2 id="modal-title">${adminReset ? `修改${esc(name)}的密码` : '修改登录密码'}</h2><p class="muted">新密码至少 8 位。${adminReset ? '保存后，该用户现有会话会退出。' : ''}</p><form id="password-form"><label for="new-password">新密码</label><input id="new-password" type="password" minlength="8" required placeholder="至少 8 个字符"><label for="confirm-password">确认新密码</label><input id="confirm-password" type="password" minlength="8" required placeholder="再次输入"><p id="password-error" class="form-error" hidden></p><button class="primary-button" type="submit">保存新密码</button></form>`);
 }
 
+function nameModal(targetId, name) {
+  state.nameTarget = targetId;
+  openModal(`<p class="eyebrow lime">EDIT PROFILE</p><h2 id="modal-title">修改姓名</h2><p class="muted">登录账号保持不变，只更新系统中显示的姓名。</p><form id="name-form"><label for="display-name">姓名</label><input id="display-name" value="${esc(name)}" maxlength="40" required><p id="name-error" class="form-error" hidden></p><button class="primary-button" type="submit">保存姓名</button></form>`);
+}
+
 document.addEventListener('click', async (event) => {
   const viewButton = event.target.closest('[data-view]');
   if (viewButton) { state.view = viewButton.dataset.view; render(); return; }
@@ -261,6 +274,7 @@ document.addEventListener('click', async (event) => {
     else if (action.dataset.action === 'toggle-coach') await toggleCoach(id, action.dataset.status);
     else if (action.dataset.action === 'change-password') passwordModal();
     else if (action.dataset.action === 'reset-user-password') passwordModal(id, action.dataset.name);
+    else if (action.dataset.action === 'edit-user-name') nameModal(id, action.dataset.name);
   } catch (error) { showFailure(error); }
 });
 
@@ -273,6 +287,7 @@ document.addEventListener('submit', async (event) => {
     if (event.target.id === 'slot-form') await addSlot();
     if (event.target.id === 'coach-form') await createCoach();
     if (event.target.id === 'password-form') await changePassword();
+    if (event.target.id === 'name-form') await changeManagedName();
   } catch (error) {
     const errorElement = event.target.querySelector('.form-error');
     if (errorElement) { errorElement.textContent = error.message; errorElement.hidden = false; }
@@ -327,6 +342,14 @@ async function changePassword() {
   else await WesportAPI.put('/api/account/password', { password });
   closeModal();
   await refresh('密码已更新');
+}
+
+async function changeManagedName() {
+  const name = $('#display-name').value.trim();
+  if (!name) throw new Error('姓名不能为空。');
+  await WesportAPI.put(`/api/admin/users/${encodeURIComponent(state.nameTarget)}/name`, { name });
+  closeModal();
+  await refresh('姓名已更新');
 }
 
 $('#sidebar-name').textContent = account.name;

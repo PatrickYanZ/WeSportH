@@ -42,6 +42,8 @@ export default {
       if (request.method === 'PATCH' && coachMatch) return updateCoach(request, auth, env, cors, coachMatch[1]);
       const userPasswordMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
       if (request.method === 'PUT' && userPasswordMatch) return resetManagedUserPassword(request, auth, env, cors, userPasswordMatch[1]);
+      const userNameMatch = path.match(/^\/api\/admin\/users\/([^/]+)\/name$/);
+      if (request.method === 'PUT' && userNameMatch) return updateManagedUserName(request, auth, env, cors, userNameMatch[1]);
 
       return json({ error: 'not_found' }, 404, cors);
     } catch (error) {
@@ -371,6 +373,20 @@ async function resetManagedUserPassword(request, auth, env, cors, userId) {
     if (!result.meta.changes) throw new HttpError(404, '没有找到该用户。');
     await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
     return json({ ok: true }, 200, cors);
+  } catch (error) { return handled(error, cors); }
+}
+
+async function updateManagedUserName(request, auth, env, cors, userId) {
+  try {
+    requireRole(auth, 'admin');
+    const data = await body(request);
+    const name = cleanName(data.name);
+    const result = await env.DB.prepare(`
+      UPDATE users SET display_name = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND role IN ('member', 'coach')
+    `).bind(name, userId).run();
+    if (!result.meta.changes) throw new HttpError(404, '没有找到该用户。');
+    return json({ id: userId, name }, 200, cors);
   } catch (error) { return handled(error, cors); }
 }
 
